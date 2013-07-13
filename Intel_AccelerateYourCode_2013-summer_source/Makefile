@@ -1,5 +1,5 @@
 CC=icpc
-OPTIMIZATION=-O3
+OPTIMIZATION=-O3 -openmp -xAVX
 CFLAGS=-ansi -std=c++11  -pedantic -Iincludes $(OPTIMIZATION) -vec-report=2
 CFLAGS_DEBUG=-W -g -Wall -ansi -std=c++11  -pedantic -Iincludes -O0 -vec-report=2 -check-uninit -debug all
 CFLAGS_MIC=$(CFLAGS) -mmic

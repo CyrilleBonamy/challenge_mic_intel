@@ -85,6 +85,8 @@ typedef struct{
 	int position_y;
 }Result;
 
+
+
 /*!
  * \brief Try to match the exact template in the main image starting at coordinates [h,w] in the main image.
  * \param main_image The main image.
@@ -135,6 +137,8 @@ bool read_parameters(int argc, char* argv[], Parameters& parameters){
 }
 
 int main(int argc, char* argv[]){
+	int temp_height,temp_width,image_height,image_width;	
+	int Xtest[10000000];
 	if(argc<=1) return 0;
 	if(argv == NULL) return 0;
 
@@ -150,8 +154,13 @@ int main(int argc, char* argv[]){
 		cout<<endl<<"For example : ./run 4 3 img.bmp template1.bmp template2.bmp"<<endl;
 		return -1;
 	}
+ /* Set num OMP threads*/
+   omp_set_num_threads(parameters.nb_threads);
+//
 	//Read the main image
 	Accelerate::Image main_image = Accelerate::Image::create_image_from_bitmap(parameters.main_image_name);
+	image_height=main_image.get_height();
+	image_width=main_image.get_width();
 	//iterates over the pattern images
 	for(string temp_name : parameters.template_names){ 
 		//Read a specific pattern image
@@ -164,26 +173,63 @@ int main(int argc, char* argv[]){
 		for(unsigned int s=1; s<=parameters.max_scale; s++){
 			//Create a scaled image
 			Accelerate::Image temp = template_image.scale_image(s);
-			//iterates on the main image pixels
-			for(unsigned int wm=0; wm<main_image.get_width(); wm++){
-				for(unsigned int hm=0; hm<main_image.get_height(); hm++){
-					//Try to match the template
-					if(match_template(main_image, temp, hm, wm)){
-						//The pattern image has been found so save the result
-						Result result;
-						result.pattern_ID = template_id;
-						result.position_x = wm;
-						result.position_y = hm;
-						result_list.push_back(result);		
+			temp_height=temp.get_height();
+			temp_width=temp.get_width();
+/*			if (temp_height > temp_width){
+				//iterates on the main image pixels
+				for(unsigned int wm=0; wm<main_image.get_width(); wm++){
+					for(unsigned int hm=0; hm<main_image.get_height(); hm++){
+						//Try to match the template
+						if(match_template(main_image, temp, hm, wm)){
+							//The pattern image has been found so save the result
+							Result result;
+							result.pattern_ID = template_id;
+							result.position_x = wm;
+							result.position_y = hm;
+							result_list.push_back(result);	
+							//modif BONAMY
+							hm = hm+temp.get_height()-1;	
+						}
 					}
 				}
-			} 
-	
-		}
+			}
+			else{
+*/				//iterates on the main image pixels
+//#pragma omp parallel default(shared)
+//{
+#pragma omp parallel for default(shared) schedule(dynamic)
+					for(unsigned int wm=0; wm<=(image_width-temp_width); wm++){
+				for(unsigned int hm=0; hm<=(image_height-temp_height); hm++){
+						//Try to match the template
+
+if(Xtest[hm*image_width+wm]==0){
+						if(match_template(main_image, temp, hm, wm)){
+							//The pattern image has been found so save the result
+							Result result;
+							result.pattern_ID = template_id;
+							result.position_x = wm;
+							result.position_y = hm;
+							result_list.push_back(result);	
+							//modif BONAMY
+								for(unsigned int i=0; i<temp_height; i++){
+			                                        for(unsigned int j=0; j<temp_width; j++){
+
+								Xtest[(hm+i)*image_width+wm+j]=1;
+								}
+								}
+//							wm = wm+temp_width-1;	
+						}
+					}
+				}
+}
+//			}
+//		}
 	}
+}
 	//sort the result list
 	result_list.sort(compare_results);
 	//Print the results
+	//
 	for(Result res : result_list){
 		cout<<res.pattern_ID<<"\t"<<res.position_x<<"\t"<<res.position_y<<endl;
 	}
@@ -194,22 +240,71 @@ int main(int argc, char* argv[]){
 
 
 bool match_template(const Accelerate::Image& main_image, const Accelerate::Image& template_image, unsigned int h, unsigned int w){
+int test=0;
 	//The next cases are not possible
-	if(main_image.get_width() - w < template_image.get_width()) return false;
-	if(main_image.get_height() - h < template_image.get_height()) return false;
+//	if(main_image.get_width() - w < template_image.get_width()) return false;
+//	if(main_image.get_height() - h < template_image.get_height()) return false;
 	//Iterates over the pattern and compare each pixel with the pixels of the main image
-	for(unsigned int wt=0; wt<template_image.get_width(); wt++){
-		for(unsigned int ht=0; ht<template_image.get_height(); ht++){
+if(!(template_image.get_width()%2)&& !(template_image.get_height()%2)){
+      for(unsigned int wt=0; wt<template_image.get_width()/2; wt++){
+                for(unsigned int ht=0; ht<template_image.get_height()/2; ht++){
 			//If a single pixel do not match, we return false
 			//You can also improve this part of the algorithm as some images can have different contrasts,
 			//lights, etc
-			if(template_image.get_pixel(ht, wt).r != main_image.get_pixel(h+(ht), w+(wt)).r ||
+			if(template_image.get_pixel(ht+template_image.get_height()/2, wt+template_image.get_width()/2).r != main_image.get_pixel(h+(ht+template_image.get_height()/2), w+(wt+template_image.get_width()/2)).r ||
+                                template_image.get_pixel(ht+template_image.get_height()/2, wt+template_image.get_width()/2).g != main_image.get_pixel(h+(ht+template_image.get_height()/2), w+(wt+template_image.get_width()/2)).g ||
+                                template_image.get_pixel(ht+template_image.get_height()/2, wt+template_image.get_width()/2).b != main_image.get_pixel(h+(ht+template_image.get_height()/2), w+(wt+template_image.get_width()/2)).b){
+                                return false; 
+                        }
+			else if(template_image.get_pixel(ht, wt).r != main_image.get_pixel(h+(ht), w+(wt)).r ||
 				template_image.get_pixel(ht, wt).g != main_image.get_pixel(h+(ht), w+(wt)).g || 
 				template_image.get_pixel(ht, wt).b != main_image.get_pixel(h+(ht), w+(wt)).b){ 
+				return false;
+			}
+			else if(template_image.get_pixel(ht, wt+template_image.get_width()/2).r != main_image.get_pixel(h+(ht), w+(wt+template_image.get_width()/2)).r ||
+                                template_image.get_pixel(ht, wt+template_image.get_width()/2).g != main_image.get_pixel(h+(ht), w+(wt+template_image.get_width()/2)).g ||
+                                template_image.get_pixel(ht, wt+template_image.get_width()/2).b != main_image.get_pixel(h+(ht), w+(wt+template_image.get_width()/2)).b){
+                                return false;
+                        }
+			else if(template_image.get_pixel(ht+template_image.get_height()/2, wt).r != main_image.get_pixel(h+(ht+template_image.get_height()/2), w+(wt)).r ||
+				template_image.get_pixel(ht+template_image.get_height()/2, wt).g != main_image.get_pixel(h+(ht+template_image.get_height()/2), w+(wt)).g || 
+				template_image.get_pixel(ht+template_image.get_height()/2, wt).b != main_image.get_pixel(h+(ht+template_image.get_height()/2), w+(wt)).b){ 
 				return false;
 			}
 		}
 	}
 	return true;
+
+
+}
+else{
+     for(unsigned int wt=0; wt<template_image.get_width()/2; wt++){
+                for(unsigned int ht=0; ht<template_image.get_height(); ht++){
+                        if(template_image.get_pixel(ht, wt).r != main_image.get_pixel(h+(ht), w+(wt)).r ||
+                                template_image.get_pixel(ht, wt).g != main_image.get_pixel(h+(ht), w+(wt)).g ||
+                                template_image.get_pixel(ht, wt).b != main_image.get_pixel(h+(ht), w+(wt)).b){
+                                return false;
+                        }
+                        else if(template_image.get_pixel(ht, wt+template_image.get_width()/2).r != main_image.get_pixel(h+(ht), w+(wt+template_image.get_width()/2)).r ||
+                                template_image.get_pixel(ht, wt+template_image.get_width()/2).g != main_image.get_pixel(h+(ht), w+(wt+template_image.get_width()/2)).g ||
+                                template_image.get_pixel(ht, wt+template_image.get_width()/2).b != main_image.get_pixel(h+(ht), w+(wt+template_image.get_width()/2)).b){
+                                return false;
+                        }
+                }
+        }
+		unsigned int wt=template_image.get_width()-1;
+                for(unsigned int ht=0; ht<template_image.get_height(); ht++){
+                        if(template_image.get_pixel(ht, wt).r != main_image.get_pixel(h+(ht), w+(wt)).r ||
+                                template_image.get_pixel(ht, wt).g != main_image.get_pixel(h+(ht), w+(wt)).g ||
+                                template_image.get_pixel(ht, wt).b != main_image.get_pixel(h+(ht), w+(wt)).b){
+                                return false;
+                        }
+                }
+
+        return true;
+
+
+}
+
 }
 
