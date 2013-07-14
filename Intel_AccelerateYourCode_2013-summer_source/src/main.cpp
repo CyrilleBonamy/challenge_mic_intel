@@ -155,6 +155,8 @@ int main(int argc, char* argv[]){
 		return -1;
 	}
 	/* Set num OMP threads*/
+cout<<parameters.nb_threads<<"\t"<<omp_get_max_threads()<<endl;
+
 	omp_set_num_threads(parameters.nb_threads);
 	//
 	//Read the main image
@@ -183,6 +185,7 @@ int main(int argc, char* argv[]){
 			
 			#pragma omp parallel for default(shared) schedule(dynamic)
 			for(unsigned int wm=0; wm<=(image_width-temp_width); wm++){
+				#pragma omp parallel for default(shared) shared(wm) schedule(dynamic)
 				for(unsigned int hm=0; hm<=(image_height-temp_height); hm++){
 					//Try to match the template
 //					if(Xtest[hm*image_width+wm]==0){
@@ -201,7 +204,7 @@ int main(int argc, char* argv[]){
 						}
 //					}
 				}
-			}		
+			}
 		}
 	}
 	//sort the result list
