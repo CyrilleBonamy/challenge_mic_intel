@@ -138,7 +138,6 @@ bool read_parameters(int argc, char* argv[], Parameters& parameters){
 
 int main(int argc, char* argv[]){
 	int temp_height,temp_width,image_height,image_width;	
-//	int Xtest[10000000];
 	if(argc<=1) return 0;
 	if(argv == NULL) return 0;
 
@@ -175,31 +174,19 @@ int main(int argc, char* argv[]){
 			Accelerate::Image temp = template_image.scale_image(s);
 			temp_height=temp.get_height();
 			temp_width=temp.get_width();
-//			for(unsigned int i=0; i<temp_height; i++){
-//				for(unsigned int j=0; j<temp_width; j++){
-//					Xtest[(hm+i)*image_width+wm+j]=1;
-//				}
-//			}
 			
 			#pragma omp parallel for default(shared) schedule(dynamic)
 			for(unsigned int wm=0; wm<=(image_width-temp_width); wm++){
 				for(unsigned int hm=0; hm<=(image_height-temp_height); hm++){
 					//Try to match the template
-//					if(Xtest[hm*image_width+wm]==0){
-						if(match_template(main_image, temp, hm, wm)){
-							//The pattern image has been found so save the result
-							Result result;
-							result.pattern_ID = template_id;
-							result.position_x = wm;
-							result.position_y = hm;
-							result_list.push_back(result);	
-//							for(unsigned int i=0; i<temp_height; i++){
-//			                                        for(unsigned int j=0; j<temp_width; j++){
-//									Xtest[(hm+i)*image_width+wm+j]=1;
-//								}
-//							}
-						}
-//					}
+					if(match_template(main_image, temp, hm, wm)){
+						//The pattern image has been found so save the result
+						Result result;
+						result.pattern_ID = template_id;
+						result.position_x = wm;
+						result.position_y = hm;
+						result_list.push_back(result);	
+					}
 				}
 			}		
 		}
