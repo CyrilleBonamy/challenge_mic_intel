@@ -154,9 +154,9 @@ int main(int argc, char* argv[]){
 		cout<<endl<<"For example : ./run 4 3 img.bmp template1.bmp template2.bmp"<<endl;
 		return -1;
 	}
- /* Set num OMP threads*/
-   omp_set_num_threads(parameters.nb_threads);
-//
+	/* Set num OMP threads*/
+	omp_set_num_threads(parameters.nb_threads);
+	//
 	//Read the main image
 	Accelerate::Image main_image = Accelerate::Image::create_image_from_bitmap(parameters.main_image_name);
 	image_height=main_image.get_height();
@@ -175,34 +175,12 @@ int main(int argc, char* argv[]){
 			Accelerate::Image temp = template_image.scale_image(s);
 			temp_height=temp.get_height();
 			temp_width=temp.get_width();
-/*			if (temp_height > temp_width){
-				//iterates on the main image pixels
-				for(unsigned int wm=0; wm<main_image.get_width(); wm++){
-					for(unsigned int hm=0; hm<main_image.get_height(); hm++){
-						//Try to match the template
-						if(match_template(main_image, temp, hm, wm)){
-							//The pattern image has been found so save the result
-							Result result;
-							result.pattern_ID = template_id;
-							result.position_x = wm;
-							result.position_y = hm;
-							result_list.push_back(result);	
-							//modif BONAMY
-							hm = hm+temp.get_height()-1;	
-						}
-					}
-				}
-			}
-			else{
-*/				//iterates on the main image pixels
-//#pragma omp parallel default(shared)
-//{
-#pragma omp parallel for default(shared) schedule(dynamic)
-					for(unsigned int wm=0; wm<=(image_width-temp_width); wm++){
+			
+			#pragma omp parallel for default(shared) schedule(dynamic)
+			for(unsigned int wm=0; wm<=(image_width-temp_width); wm++){
 				for(unsigned int hm=0; hm<=(image_height-temp_height); hm++){
-						//Try to match the template
-
-if(Xtest[hm*image_width+wm]==0){
+					//Try to match the template
+					if(Xtest[hm*image_width+wm]==0){
 						if(match_template(main_image, temp, hm, wm)){
 							//The pattern image has been found so save the result
 							Result result;
@@ -210,22 +188,17 @@ if(Xtest[hm*image_width+wm]==0){
 							result.position_x = wm;
 							result.position_y = hm;
 							result_list.push_back(result);	
-							//modif BONAMY
-								for(unsigned int i=0; i<temp_height; i++){
+							for(unsigned int i=0; i<temp_height; i++){
 			                                        for(unsigned int j=0; j<temp_width; j++){
-
-								Xtest[(hm+i)*image_width+wm+j]=1;
+									Xtest[(hm+i)*image_width+wm+j]=1;
 								}
-								}
-//							wm = wm+temp_width-1;	
+							}
 						}
 					}
 				}
-}
-//			}
-//		}
+			}		
+		}
 	}
-}
 	//sort the result list
 	result_list.sort(compare_results);
 	//Print the results
